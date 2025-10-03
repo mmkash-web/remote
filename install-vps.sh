@@ -118,6 +118,11 @@ apt update -qq && apt upgrade -y -qq
 print_success "System updated"
 
 print_info "Installing essential packages..."
+# Pre-configure SSH to avoid interactive prompts
+export DEBIAN_FRONTEND=noninteractive
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections
+
 apt install -y -qq build-essential git curl wget software-properties-common \
     ufw fail2ban python3-pip python3-venv python3-dev libpq-dev \
     postgresql postgresql-contrib redis-server nginx certbot python3-certbot-nginx \

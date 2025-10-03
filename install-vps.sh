@@ -88,6 +88,41 @@ print_info() {
     echo -e "${YELLOW}→ $1${NC}"
 }
 
+# Function to install packages without interactive prompts
+install_packages() {
+    local packages=("$@")
+    
+    # Pre-configure all packages to avoid interactive prompts
+    export DEBIAN_FRONTEND=noninteractive
+    
+    # Pre-configure SSH server to keep existing configuration
+    echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+    echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+    
+    # Pre-configure other packages that might prompt
+    echo "postgresql-common postgresql-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+    echo "nginx-common nginx-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+    echo "ufw ufw/enable boolean true" | debconf-set-selections 2>/dev/null || true
+    
+    # Install packages with timeout
+    print_info "Updating package lists..."
+    timeout 300 apt-get update -qq || {
+        print_error "Package update timed out, continuing..."
+    }
+    
+    print_info "Installing packages..."
+    timeout 1800 apt-get install -y -qq --no-install-recommends "${packages[@]}" || {
+        print_error "Package installation failed or timed out, trying alternative approach..."
+        # Try installing packages one by one
+        for package in "${packages[@]}"; do
+            print_info "Installing $package..."
+            timeout 300 apt-get install -y -qq --no-install-recommends "$package" || {
+                print_error "Failed to install $package, continuing..."
+            }
+        done
+    }
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     print_error "Please run as root (use sudo)"
@@ -118,15 +153,99 @@ apt update -qq && apt upgrade -y -qq
 print_success "System updated"
 
 print_info "Installing essential packages..."
-# Pre-configure SSH to avoid interactive prompts
-export DEBIAN_FRONTEND=noninteractive
-echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections
-echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections
 
-apt install -y -qq build-essential git curl wget software-properties-common \
-    ufw fail2ban python3-pip python3-venv python3-dev libpq-dev \
-    postgresql postgresql-contrib redis-server nginx certbot python3-certbot-nginx \
-    wireguard net-tools htop
+# Backup SSH config before installation
+if [ -f /etc/ssh/sshd_config ]; then
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
+    print_info "SSH config backed up"
+fi
+
+# Create a more robust installation approach
+print_info "Setting up non-interactive package installation..."
+
+# Pre-configure all packages to avoid any interactive prompts
+export DEBIAN_FRONTEND=noninteractive
+export UCF_FORCE_CONFFNEW=1
+
+# Pre-configure SSH server specifically
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+
+# Pre-configure other packages
+echo "postgresql-common postgresql-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+echo "nginx-common nginx-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+echo "ufw ufw/enable boolean true" | debconf-set-selections 2>/dev/null || true
+
+# Install packages with robust error handling
+install_packages \
+    build-essential \
+    git \
+    curl \
+    wget \
+    software-properties-common \
+    ufw \
+    fail2ban \
+    python3-pip \
+    python3-venv \
+    python3-dev \
+    libpq-dev \
+    postgresql \
+    postgresql-contrib \
+    redis-server \
+    nginx \
+    certbot \
+    python3-certbot-nginx \
+    wireguard \
+    net-tools \
+    htop
+
+# Install SSH server separately with special handling
+print_info "Installing SSH server with special handling..."
+
+# Create a temporary script to handle SSH installation
+cat > /tmp/install_ssh.sh << 'EOF'
+#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
+export UCF_FORCE_CONFFNEW=1
+
+# Pre-configure SSH server
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+
+# Install SSH server
+apt-get install -y -qq --no-install-recommends openssh-server
+EOF
+
+chmod +x /tmp/install_ssh.sh
+
+# Run SSH installation with timeout
+if timeout 300 /tmp/install_ssh.sh; then
+    print_success "SSH server installed successfully"
+else
+    print_error "SSH server installation failed, trying manual approach..."
+    # Try manual installation with force
+    echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+    echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+    timeout 300 apt-get install -y -qq --no-install-recommends openssh-server || {
+        print_error "SSH server installation failed, but continuing..."
+    }
+fi
+
+# Clean up
+rm -f /tmp/install_ssh.sh
+
+# Restore SSH config if it was modified
+if [ -f /etc/ssh/sshd_config.backup ]; then
+    if ! diff -q /etc/ssh/sshd_config /etc/ssh/sshd_config.backup >/dev/null 2>&1; then
+        print_info "Restoring SSH configuration..."
+        cp /etc/ssh/sshd_config.backup /etc/ssh/sshd_config
+        systemctl restart sshd
+        print_success "SSH configuration restored"
+    fi
+    rm -f /etc/ssh/sshd_config.backup
+fi
+
 print_success "Essential packages installed"
 
 print_info "Creating deployment user..."

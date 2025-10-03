@@ -51,11 +51,30 @@ fi
 echo -e "${BLUE}📋 Let's set up your billing system!${NC}\n"
 
 # Get configuration from user
-read -p "Enter your domain name (or VPS IP address): " DOMAIN
-read -p "Enter your email (for SSL certificate): " ADMIN_EMAIL
-read -p "Enter admin username for Django: " ADMIN_USERNAME
-read -sp "Enter admin password: " ADMIN_PASSWORD
-echo
+echo -e "${YELLOW}📝 Please provide the following information:${NC}\n"
+
+# Check if running in non-interactive mode (via curl)
+if [ -t 0 ]; then
+    # Interactive mode
+    read -p "Enter your domain name (or VPS IP address): " DOMAIN
+    read -p "Enter your email (for SSL certificate): " ADMIN_EMAIL
+    read -p "Enter admin username for Django: " ADMIN_USERNAME
+    read -sp "Enter admin password: " ADMIN_PASSWORD
+    echo
+else
+    # Non-interactive mode (via curl) - use defaults
+    echo -e "${YELLOW}⚠️  Running in non-interactive mode, using defaults${NC}"
+    DOMAIN="remote.netbill.site"
+    ADMIN_EMAIL="admin@netbill.site"
+    ADMIN_USERNAME="admin"
+    ADMIN_PASSWORD="admin123"
+    echo -e "${GREEN}✓ Using default configuration${NC}"
+    echo -e "   Domain: $DOMAIN"
+    echo -e "   Email: $ADMIN_EMAIL"
+    echo -e "   Username: $ADMIN_USERNAME"
+    echo -e "   Password: $ADMIN_PASSWORD"
+    echo -e "${YELLOW}⚠️  Please change these defaults after installation!${NC}\n"
+fi
 
 # Generate secure passwords
 DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
@@ -105,19 +124,44 @@ echo -e "${GREEN}✓ System updated${NC}"
 
 # Install dependencies
 print_step "Step 2/8: Installing Dependencies"
-apt install -y python3-pip python3-venv python3-dev \
+
+# Pre-configure packages to avoid interactive prompts
+export DEBIAN_FRONTEND=noninteractive
+export UCF_FORCE_CONFFNEW=1
+
+# Pre-configure SSH server to keep existing configuration
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+echo "openssh-server openssh-server/conflicts_with_openssh-server boolean true" | debconf-set-selections 2>/dev/null || true
+
+# Pre-configure other packages
+echo "postgresql-common postgresql-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+echo "nginx-common nginx-common/install-error select abort" | debconf-set-selections 2>/dev/null || true
+echo "ufw ufw/enable boolean true" | debconf-set-selections 2>/dev/null || true
+
+# Install packages with timeout
+timeout 1800 apt install -y python3-pip python3-venv python3-dev \
     postgresql postgresql-contrib \
     redis-server \
     nginx \
     git \
     ufw \
     certbot python3-certbot-nginx \
-    build-essential libpq-dev
+    build-essential libpq-dev \
+    openssh-server || {
+    echo -e "${YELLOW}⚠️  Some packages may have failed, continuing...${NC}"
+}
+
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
 # Setup PostgreSQL
 print_step "Step 3/8: Configuring Database"
-sudo -u postgres psql << EOF
+
+# Start PostgreSQL if not running
+systemctl start postgresql
+systemctl enable postgresql
+
+# Create database and user
+if sudo -u postgres psql << EOF
 CREATE DATABASE $DB_NAME;
 CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
 ALTER ROLE $DB_USER SET client_encoding TO 'utf8';
@@ -126,7 +170,13 @@ ALTER ROLE $DB_USER SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 \q
 EOF
-echo -e "${GREEN}✓ Database configured${NC}"
+then
+    echo -e "${GREEN}✓ Database configured${NC}"
+else
+    echo -e "${RED}❌ Failed to configure database${NC}"
+    echo -e "${YELLOW}Please check PostgreSQL installation${NC}"
+    exit 1
+fi
 
 # Create deploy user
 print_step "Step 4/8: Creating Deploy User"
@@ -144,15 +194,55 @@ if [ -d "$APP_DIR" ]; then
     rm -rf $APP_DIR
 fi
 
-sudo -u deploy git clone $REPO_URL $APP_DIR
-cd $APP_DIR
-echo -e "${GREEN}✓ Application downloaded${NC}"
+# Create deploy user if it doesn't exist
+if ! id -u deploy > /dev/null 2>&1; then
+    useradd -m -s /bin/bash deploy
+    echo -e "${GREEN}✓ Deploy user created${NC}"
+fi
+
+# Clone repository with error handling
+if sudo -u deploy git clone $REPO_URL $APP_DIR; then
+    cd $APP_DIR
+    echo -e "${GREEN}✓ Application downloaded${NC}"
+else
+    echo -e "${RED}❌ Failed to clone repository${NC}"
+    echo -e "${YELLOW}Please check your repository URL: $REPO_URL${NC}"
+    exit 1
+fi
 
 # Setup Python environment
 print_step "Step 6/8: Setting Up Python Environment"
-sudo -u deploy python3 -m venv venv
-sudo -u deploy $APP_DIR/venv/bin/pip install --upgrade pip
-sudo -u deploy $APP_DIR/venv/bin/pip install -r requirements.txt
+
+# Check if requirements.txt exists
+if [ ! -f "$APP_DIR/requirements.txt" ]; then
+    echo -e "${RED}❌ requirements.txt not found in $APP_DIR${NC}"
+    echo -e "${YELLOW}Please check your repository structure${NC}"
+    exit 1
+fi
+
+# Create virtual environment
+if sudo -u deploy python3 -m venv venv; then
+    echo -e "${GREEN}✓ Virtual environment created${NC}"
+else
+    echo -e "${RED}❌ Failed to create virtual environment${NC}"
+    exit 1
+fi
+
+# Install packages
+if sudo -u deploy $APP_DIR/venv/bin/pip install --upgrade pip; then
+    echo -e "${GREEN}✓ Pip upgraded${NC}"
+else
+    echo -e "${YELLOW}⚠️  Pip upgrade failed, continuing...${NC}"
+fi
+
+if sudo -u deploy $APP_DIR/venv/bin/pip install -r requirements.txt; then
+    echo -e "${GREEN}✓ Python packages installed${NC}"
+else
+    echo -e "${RED}❌ Failed to install Python packages${NC}"
+    echo -e "${YELLOW}Please check your requirements.txt file${NC}"
+    exit 1
+fi
+
 echo -e "${GREEN}✓ Python environment ready${NC}"
 
 # Create .env file
@@ -198,11 +288,26 @@ chown deploy:deploy $APP_DIR/.env
 echo -e "${GREEN}✓ Application configured${NC}"
 
 # Run migrations
-sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py migrate
-sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py collectstatic --noinput
+if sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py migrate; then
+    echo -e "${GREEN}✓ Database migrations completed${NC}"
+else
+    echo -e "${RED}❌ Failed to run migrations${NC}"
+    echo -e "${YELLOW}Please check your Django configuration${NC}"
+    exit 1
+fi
+
+if sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py collectstatic --noinput; then
+    echo -e "${GREEN}✓ Static files collected${NC}"
+else
+    echo -e "${YELLOW}⚠️  Static files collection failed, continuing...${NC}"
+fi
 
 # Create superuser
-echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$ADMIN_USERNAME', '$ADMIN_EMAIL', '$ADMIN_PASSWORD') if not User.objects.filter(username='$ADMIN_USERNAME').exists() else None" | sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py shell
+if echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$ADMIN_USERNAME', '$ADMIN_EMAIL', '$ADMIN_PASSWORD') if not User.objects.filter(username='$ADMIN_USERNAME').exists() else None" | sudo -u deploy $APP_DIR/venv/bin/python $APP_DIR/manage.py shell; then
+    echo -e "${GREEN}✓ Superuser created${NC}"
+else
+    echo -e "${YELLOW}⚠️  Superuser creation failed, continuing...${NC}"
+fi
 
 # Setup Gunicorn service
 cat > /etc/systemd/system/mikrotik-billing.service << EOF
@@ -283,17 +388,34 @@ echo -e "${GREEN}✓ Firewall configured${NC}"
 # Start services
 systemctl daemon-reload
 systemctl enable postgresql redis-server nginx mikrotik-billing mikrotik-celery
-systemctl start postgresql redis-server nginx mikrotik-billing mikrotik-celery
 
-echo -e "\n${GREEN}✓ Services started${NC}"
+# Start services with error handling
+if systemctl start postgresql redis-server nginx mikrotik-billing mikrotik-celery; then
+    echo -e "\n${GREEN}✓ Services started${NC}"
+else
+    echo -e "\n${YELLOW}⚠️  Some services may have failed to start${NC}"
+    echo -e "${YELLOW}Please check service status manually${NC}"
+fi
+
+# Check service status
+echo -e "\n${BLUE}📊 Service Status:${NC}"
+systemctl is-active --quiet postgresql && echo -e "  ${GREEN}✓${NC} PostgreSQL" || echo -e "  ${RED}✗${NC} PostgreSQL"
+systemctl is-active --quiet redis-server && echo -e "  ${GREEN}✓${NC} Redis" || echo -e "  ${RED}✗${NC} Redis"
+systemctl is-active --quiet nginx && echo -e "  ${GREEN}✓${NC} Nginx" || echo -e "  ${RED}✗${NC} Nginx"
+systemctl is-active --quiet mikrotik-billing && echo -e "  ${GREEN}✓${NC} MikroTik Billing" || echo -e "  ${RED}✗${NC} MikroTik Billing"
+systemctl is-active --quiet mikrotik-celery && echo -e "  ${GREEN}✓${NC} Celery Worker" || echo -e "  ${RED}✗${NC} Celery Worker"
 
 # Setup SSL if domain is provided
 if [[ $DOMAIN != *"."*"."* ]] && [[ $DOMAIN =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo -e "\n${YELLOW}⚠️  Skipping SSL (IP address provided instead of domain)${NC}"
 else
     echo -e "\n${BLUE}🔐 Setting up SSL certificate...${NC}"
-    certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $ADMIN_EMAIL --redirect
-    echo -e "${GREEN}✓ SSL certificate installed${NC}"
+    if certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $ADMIN_EMAIL --redirect; then
+        echo -e "${GREEN}✓ SSL certificate installed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  SSL certificate installation failed${NC}"
+        echo -e "${YELLOW}You can run this later: sudo certbot --nginx -d $DOMAIN${NC}"
+    fi
 fi
 
 # Final message

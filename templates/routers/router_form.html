@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page header -->
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">{{ title }}</h1>
+        <p class="mt-2 text-sm text-gray-700">Configure your MikroTik router connection details</p>
+    </div>
+
+    <!-- Form card -->
+    <div class="bg-white shadow rounded-lg overflow-hidden max-w-3xl">
+        <div class="px-4 py-5 sm:p-6">
+            {% crispy form %}
+        </div>
+    </div>
+
+    <!-- Help text -->
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 max-w-3xl">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Setup Instructions</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Ensure MikroTik API is enabled on your router (port 8728)</li>
+                        <li>Use VPN tunnel IP if router is remote (e.g., 10.10.0.2)</li>
+                        <li>Create a dedicated admin user for billing system access</li>
+                        <li>Test connection after saving to verify settings</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

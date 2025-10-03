@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Voucher Batch - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Create Voucher Batch</h1>
+            <p class="mt-2 text-sm text-gray-700">Generate a new batch of prepaid vouchers</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{% url 'vouchers:batch_list' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Batches
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <form method="post" class="space-y-6 p-6">
+            {% csrf_token %}
+
+            <!-- Batch Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Batch Information</h2>
+                
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">
+                            Batch Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               id="name" 
+                               required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border"
+                               placeholder="e.g., December 2024 - Premium">
+                        <p class="mt-1 text-xs text-gray-500">A descriptive name for this batch</p>
+                    </div>
+
+                    <div>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700">
+                            Number of Vouchers <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" 
+                               name="quantity" 
+                               id="quantity" 
+                               required
+                               min="1"
+                               max="1000"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border"
+                               placeholder="e.g., 100">
+                        <p class="mt-1 text-xs text-gray-500">How many vouchers to generate (1-1000)</p>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label for="description" class="block text-sm font-medium text-gray-700">
+                        Description (Optional)
+                    </label>
+                    <textarea name="description" 
+                              id="description" 
+                              rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border"
+                              placeholder="Additional notes about this batch..."></textarea>
+                </div>
+            </div>
+
+            <!-- Profile and Router Configuration -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Configuration</h2>
+                
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="profile" class="block text-sm font-medium text-gray-700">
+                            Profile <span class="text-red-500">*</span>
+                        </label>
+                        <select name="profile" 
+                                id="profile" 
+                                required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border">
+                            <option value="">Select a profile</option>
+                            {% for profile in profiles %}
+                            <option value="{{ profile.id }}">
+                                {{ profile.name }} - {{ profile.bandwidth_limit }} ({{ profile.duration_days }} days)
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">The service profile these vouchers will provide</p>
+                    </div>
+
+                    <div>
+                        <label for="router" class="block text-sm font-medium text-gray-700">
+                            Router <span class="text-red-500">*</span>
+                        </label>
+                        <select name="router" 
+                                id="router" 
+                                required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border">
+                            <option value="">Select a router</option>
+                            {% for router in routers %}
+                            <option value="{{ router.id }}">
+                                {{ router.name }} ({{ router.host }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">The router these vouchers will be used on</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="pb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Pricing</h2>
+                
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700">
+                            Price per Voucher (KSh) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">KSh</span>
+                            </div>
+                            <input type="number" 
+                                   name="price" 
+                                   id="price" 
+                                   required
+                                   min="0"
+                                   step="0.01"
+                                   class="block w-full rounded-md border-gray-300 pl-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2 border"
+                                   placeholder="0.00">
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">The selling price for each voucher</p>
+                    </div>
+
+                    <div id="total-revenue-display" class="flex items-end">
+                        <div class="bg-blue-50 p-4 rounded-lg w-full border border-blue-200">
+                            <p class="text-sm text-blue-600 font-medium">Estimated Total Revenue</p>
+                            <p class="text-2xl font-bold text-blue-900 mt-1">KSh <span id="total-revenue">0.00</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'vouchers:batch_list' %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    Generate Vouchers
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">About Voucher Codes</h3>
+                    <p class="mt-2 text-sm text-blue-700">
+                        Each voucher will have a unique 12-character code in the format XXXX-XXXX-XXXX. 
+                        Confusing characters (O, 0, I, 1) are excluded for clarity.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-green-50 border-l-4 border-green-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-green-800">What Happens Next?</h3>
+                    <p class="mt-2 text-sm text-green-700">
+                        After generation, you can export vouchers as CSV, print them, or view them individually. 
+                        Customers can redeem vouchers to activate or extend their subscriptions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Calculate total revenue dynamically
+    function updateTotalRevenue() {
+        const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+        const price = parseFloat(document.getElementById('price').value) || 0;
+        const total = quantity * price;
+        document.getElementById('total-revenue').textContent = total.toFixed(2);
+    }
+
+    // Add event listeners
+    document.getElementById('quantity').addEventListener('input', updateTotalRevenue);
+    document.getElementById('price').addEventListener('input', updateTotalRevenue);
+
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const quantity = parseInt(document.getElementById('quantity').value);
+        const price = parseFloat(document.getElementById('price').value);
+        
+        if (quantity < 1 || quantity > 1000) {
+            e.preventDefault();
+            alert('Quantity must be between 1 and 1000');
+            return false;
+        }
+        
+        if (price < 0) {
+            e.preventDefault();
+            alert('Price cannot be negative');
+            return false;
+        }
+        
+        // Confirm large batch creation
+        if (quantity > 500) {
+            if (!confirm(`You are about to generate ${quantity} vouchers. This may take a moment. Continue?`)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+</script>
+{% endblock %}
+

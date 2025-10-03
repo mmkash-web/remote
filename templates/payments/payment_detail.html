@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment #{{ payment.id }} - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Payment #{{ payment.id }}</h1>
+            <p class="mt-2 text-sm text-gray-700">{{ payment.created_at|date:"F d, Y H:i" }}</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{% url 'payments:payment_list' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="border-b border-gray-200 pb-4 mb-4">
+            <h2 class="text-lg font-medium text-gray-900">Payment Information</h2>
+        </div>
+        
+        <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Customer</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                    <a href="{% url 'customers:customer_detail' payment.customer.id %}" class="text-indigo-600 hover:text-indigo-900">
+                        {{ payment.customer.username }} ({{ payment.customer.full_name }})
+                    </a>
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Amount</dt>
+                <dd class="mt-1 text-sm font-semibold text-gray-900">KES {{ payment.amount }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Payment Method</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ payment.payment_method|upper }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Transaction ID</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ payment.transaction_id|default:"N/A" }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                <dd class="mt-1">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ payment.get_status_badge_class }} text-white">
+                        {{ payment.status }}
+                    </span>
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ payment.phone_number|default:"N/A" }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Created At</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ payment.created_at|date:"Y-m-d H:i:s" }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Updated At</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ payment.updated_at|date:"Y-m-d H:i:s" }}</dd>
+            </div>
+        </dl>
+
+        {% if payment.notes %}
+        <div class="mt-6">
+            <dt class="text-sm font-medium text-gray-500">Notes</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{ payment.notes }}</dd>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

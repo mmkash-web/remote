@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer: {{ customer.username }} - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ customer.username }}</h1>
+            <p class="mt-2 text-sm text-gray-700">{{ customer.full_name }}</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <a href="{% url 'customers:customer_edit' customer.id %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-edit mr-2"></i>Edit
+            </a>
+            {% if customer.is_active %}
+            <form method="post" action="{% url 'customers:customer_disable' customer.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50">
+                    <i class="fas fa-ban mr-2"></i>Disable
+                </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'customers:customer_enable' customer.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50">
+                    <i class="fas fa-check mr-2"></i>Enable
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'payments:payment_manual_create' customer.id %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                <i class="fas fa-money-bill mr-2"></i>Record Payment
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium mb-4">Customer Information</h2>
+        <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Username</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.username }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Full Name</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.full_name }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.email|default:"N/A" }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.phone_number|default:"N/A" }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Router</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.router.name }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Profile</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.profile.name }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                <dd class="mt-1">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ customer.get_status_badge_class }} text-white">
+                        {{ customer.status }}
+                    </span>
+                </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Expires At</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ customer.expires_at|date:"Y-m-d H:i"|default:"N/A" }}</dd>
+            </div>
+        </dl>
+    </div>
+</div>
+{% endblock %}
+

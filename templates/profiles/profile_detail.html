@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile: {{ profile.name }} - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ profile.name }}</h1>
+            <p class="mt-2 text-sm text-gray-700">{{ profile.description }}</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <a href="{% url 'profiles:profile_edit' profile.id %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-edit mr-2"></i>Edit
+            </a>
+            <a href="{% url 'profiles:profile_list' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium mb-4">Profile Details</h2>
+        <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Name</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile.name }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Price</dt>
+                <dd class="mt-1 text-sm text-gray-900 font-semibold">{{ profile.currency }} {{ profile.price }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Speed</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile.get_speed_display }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Duration</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ profile.get_duration_display_text }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Total Customers</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ total_customers }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Active Customers</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ active_customers }}</dd>
+            </div>
+        </dl>
+    </div>
+</div>
+{% endblock %}
+

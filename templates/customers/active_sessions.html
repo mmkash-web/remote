@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Active Sessions - MikroTik Billing{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Active Sessions</h1>
+            <p class="mt-2 text-sm text-gray-700">Real-time VPN connections across all routers</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <button onclick="window.location.reload()" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-wifi text-2xl text-green-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Active Connections</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ total_active }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-server text-2xl text-indigo-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Live Status</dt>
+                            <dd class="text-sm font-semibold text-green-600">
+                                <i class="fas fa-circle animate-pulse"></i> Connected
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-2xl text-blue-600"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Last Updated</dt>
+                            <dd class="text-sm font-semibold text-gray-900">Just now</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:p-6">
+            {% if active_sessions %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Router</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP Address</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uptime</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                            <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for session in active_sessions %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                                            <i class="fas fa-user text-green-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ session.name }}</div>
+                                        {% if session.customer %}
+                                        <div class="text-xs text-gray-500">{{ session.customer.full_name }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ session.router.name }}</div>
+                                <div class="text-xs text-gray-500">{{ session.router.host }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {% if session.address %}
+                                        {{ session.address }}
+                                    {% elif session.caller_id %}
+                                        {{ session.caller_id }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {% if session.uptime %}
+                                    {{ session.uptime }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    {% if session.service %}
+                                        {{ session.service }}
+                                    {% else %}
+                                        PPP
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                {% if session.customer %}
+                                <a href="{% url 'customers:customer_detail' session.customer.id %}" 
+                                   class="text-indigo-600 hover:text-indigo-900">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% else %}
+                                <span class="text-gray-400">
+                                    <i class="fas fa-user-slash"></i> No account
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-wifi text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Active Sessions</h3>
+                <p class="text-sm text-gray-500 mb-6">There are currently no active VPN connections across your routers.</p>
+                <button onclick="window.location.reload()" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Refresh
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if active_sessions %}
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    <strong>Note:</strong> This page shows real-time active connections from your MikroTik routers. 
+                    Data is fetched live from each router when you load this page.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 30 seconds (optional)
+    // setTimeout(function() {
+    //     window.location.reload();
+    // }, 30000);
+</script>
+{% endblock %}
+{% endblock %}
+

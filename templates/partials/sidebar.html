@@ -1,0 +1,75 @@
+<div class="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4">
+    <div class="flex h-16 shrink-0 items-center">
+        <h1 class="text-white text-2xl font-bold">
+            <i class="fas fa-network-wired mr-2"></i>MikroTik Billing
+        </h1>
+    </div>
+    <nav class="flex flex-1 flex-col">
+        <ul role="list" class="flex flex-1 flex-col gap-y-7">
+            <li>
+                <ul role="list" class="-mx-2 space-y-1">
+                    <li>
+                        <a href="{% url 'dashboard:home' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-home w-6"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'routers:router_list' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-server w-6"></i>
+                            Routers
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'customers:customer_list' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-users w-6"></i>
+                            Customers
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'profiles:profile_list' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-tachometer-alt w-6"></i>
+                            Profiles
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'payments:payment_list' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-money-bill-wave w-6"></i>
+                            Payments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'vouchers:batch_list' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-ticket-alt w-6"></i>
+                            Vouchers
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'reports:dashboard' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-chart-bar w-6"></i>
+                            Reports
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'customers:active_sessions' %}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                            <i class="fas fa-plug w-6"></i>
+                            Active Sessions
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            <li class="mt-auto">
+                <div class="text-xs font-semibold leading-6 text-indigo-200">
+                    <p>Version {{ site_version }}</p>
+                    {% if user.is_staff %}
+                    <a href="{% url 'admin:index' %}" class="mt-2 flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-indigo-200 hover:text-white hover:bg-indigo-700">
+                        <i class="fas fa-cog w-6"></i>
+                        Admin Panel
+                    </a>
+                    {% endif %}
+                </div>
+            </li>
+        </ul>
+    </nav>
+</div>
+

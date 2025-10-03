@@ -2,8 +2,8 @@
 Django==4.2.7
 djangorestframework==3.14.0
 
-# Database - PostgreSQL support (skip for now, install separately)
-# psycopg2-binary - will install after venv setup
+# Database - PostgreSQL support
+psycopg2-binary==2.9.9
 # mysqlclient==2.2.0      # MySQL support
 
 # MikroTik API

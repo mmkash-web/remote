@@ -1,0 +1,62 @@
+{
+  "name": "MikroTik Billing System",
+  "description": "Professional MikroTik hotspot billing management system",
+  "repository": "https://github.com/yourusername/mikrotikvpn",
+  "keywords": ["django", "mikrotik", "billing", "hotspot"],
+  "stack": "scalingo-22",
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "S"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "S"
+    }
+  },
+  "addons": [
+    {
+      "plan": "postgresql:postgresql-starter-512"
+    },
+    {
+      "plan": "redis:redis-starter-256"
+    }
+  ],
+  "env": {
+    "DJANGO_SETTINGS_MODULE": {
+      "description": "Django settings module",
+      "value": "mikrotik_billing.settings"
+    },
+    "SECRET_KEY": {
+      "description": "Django secret key",
+      "generator": "secret"
+    },
+    "DEBUG": {
+      "description": "Debug mode (False in production)",
+      "value": "False"
+    },
+    "ALLOWED_HOSTS": {
+      "description": "Allowed hosts (your Scalingo domain)",
+      "value": ".scalingo.io,.osc-fr1.scalingo.io"
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL database URL (auto-configured by Scalingo)"
+    },
+    "REDIS_URL": {
+      "description": "Redis URL for Celery (auto-configured by Scalingo)"
+    },
+    "MIKROTIK_VPN_TYPE": {
+      "description": "VPN type: tailscale, direct, or proxy",
+      "value": "direct",
+      "required": false
+    },
+    "TAILSCALE_AUTHKEY": {
+      "description": "Tailscale authentication key (if using Tailscale)",
+      "required": false
+    }
+  },
+  "scripts": {
+    "postdeploy": "python manage.py migrate && python manage.py collectstatic --noinput"
+  }
+}
+
